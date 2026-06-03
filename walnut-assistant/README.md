@@ -14,10 +14,8 @@ walnut
 walnut                 # 交互式菜单
 walnut ai              # 打开 WalnutAI 聊天
 walnut notes           # 笔记子菜单
-walnut play            # 打开音乐、数字雨、时钟和视频演示
-walnut console         # 打开中文 framebuffer 控制台子菜单
+walnut play            # 打开 Music、Screen 和 One-shot Toys 分类
 walnut status          # 系统、网络、服务、Docker、蓝牙状态
-walnut maintenance     # 打开修复 / 项目 / 清理 / 浏览器 / 监控子菜单
 walnut video [mode]    # 播放 ASCII 视频演示：color 或 gray
 walnut voice           # 打开语音键盘 CLI
 walnut note TEXT       # 追加一条日记笔记
@@ -27,10 +25,10 @@ walnut today           # 显示今天的笔记
 较少直接使用的命令：
 
 - `walnut status`：设备、网络和服务检查
-- `walnut maintenance`：浏览器、监控、修复、项目和清理
 - `walnut video color|gray`：直接播放 ASCII 视频
 - `walnut note TEXT` 和 `walnut today`：快速记笔记
-- `walnut voice`：语音键盘 CLI
+- `walnut voice`：语音键盘 CLI；主菜单暂时隐藏，等接入麦克风和 STT 凭据后再测试
+- `voice-keyboard-walnutpi.service`：保留安装能力，但默认不自启
 
 ## 设计
 

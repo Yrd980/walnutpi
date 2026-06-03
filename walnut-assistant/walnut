@@ -6,6 +6,8 @@ from __future__ import annotations
 import argparse
 import os
 import pwd
+import re
+import shlex
 import shutil
 import subprocess
 from datetime import datetime
@@ -25,7 +27,12 @@ HOME = user_home()
 MEMORY_ROOT = Path(os.getenv("WALNUT_MEMORY_DIR", str(HOME / "walnut-memory")))
 NOTES_DIR = MEMORY_ROOT / "daily"
 MUSIC_LINK = HOME / "Music" / "WalnutMusic"
-CMUS_PLAYLIST = HOME / ".config" / "cmus" / "walnut-library.pls"
+CMUS_HOME = HOME / ".config" / "walnut-cmus"
+CMUS_PLAYLIST = HOME / ".config" / "cmus" / "walnut-library.m3u"
+CMUS_RC = CMUS_HOME / "rc"
+CMUS_SOCKET = CMUS_HOME / "cmus-socket"
+CAVA_CONFIG = HOME / ".config" / "walnut-cava" / "config"
+EXTRA_COMMAND_DIRS = [Path("/usr/local/games"), Path("/usr/games")]
 PROJECT_ROOT_CANDIDATES = [
     Path(os.environ["WALNUT_PROJECT_ROOT"]) if "WALNUT_PROJECT_ROOT" in os.environ else None,
     HOME / "projects" / "WalnutPi",
@@ -36,24 +43,95 @@ MUSIC_DIR_CANDIDATES = [
     HOME / "Music" / "music-library",
 ]
 AIRPODS_MAC = "34:0E:22:C0:C7:CC"
-BROWSER_URL = "https://lite.duckduckgo.com/lite/"
 MUSIC_EXTENSIONS = {".mp3", ".ogg", ".oga", ".flac", ".wav"}
+TERM = os.getenv("TERM", "")
+COLOR_ENABLED = os.getenv("NO_COLOR") is None and TERM != "dumb"
+LOCAL_SCREEN_COLOR = os.getenv("WALNUT_FBTERM") == "1" or TERM == "linux"
+PALETTE_256 = {
+    "home": "1;38;5;154",
+    "ai": "38;5;117",
+    "notes": "38;5;222",
+    "play": "38;5;214",
+    "status": "38;5;159",
+    "music": "38;5;220",
+    "screen": "38;5;45",
+    "toys": "38;5;214",
+    "matrix": "38;5;46",
+    "pipes": "38;5;117",
+    "fire": "38;5;208",
+    "hot": "38;5;196",
+    "nyan": "38;5;213",
+    "demo": "38;5;250",
+    "caca": "38;5;201",
+    "video": "38;5;51",
+    "clock": "38;5;159",
+    "key": "1;38;5;245",
+    "back": "38;5;245",
+    "hint": "1;38;5;214",
+}
+PALETTE_LOCAL = {
+    "home": "1;32",
+    "ai": "1;36",
+    "notes": "1;33",
+    "play": "1;35",
+    "status": "1;36",
+    "music": "1;33",
+    "screen": "1;36",
+    "toys": "1;35",
+    "matrix": "1;32",
+    "pipes": "1;36",
+    "fire": "1;33",
+    "hot": "1;31",
+    "nyan": "1;35",
+    "demo": "1;37",
+    "caca": "1;35",
+    "video": "1;36",
+    "clock": "1;34",
+    "key": "1;37",
+    "back": "0;37",
+    "hint": "1;33",
+}
+PALETTE = PALETTE_LOCAL if LOCAL_SCREEN_COLOR else PALETTE_256
 
 
 def run(cmd: list[str], check: bool = False) -> subprocess.CompletedProcess[str]:
     return subprocess.run(cmd, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, check=check)
 
 
-def stream(cmd: list[str]) -> int:
+def stream(cmd: list[str], env: dict[str, str] | None = None) -> int:
     try:
-        return subprocess.call(cmd)
+        current_env = os.environ.copy()
+        path_parts = current_env.get("PATH", "").split(":")
+        for directory in EXTRA_COMMAND_DIRS:
+            directory_text = str(directory)
+            if directory_text not in path_parts:
+                path_parts.append(directory_text)
+        current_env["PATH"] = ":".join(path_parts)
+        if env:
+            current_env.update(env)
+        return subprocess.call(cmd, env=current_env)
     except FileNotFoundError:
         print(f"missing command: {cmd[0]}")
         return 127
 
 
+def command_path(cmd: str) -> str | None:
+    found = shutil.which(cmd)
+    if found:
+        return found
+    for directory in EXTRA_COMMAND_DIRS:
+        candidate = directory / cmd
+        if candidate.exists() and os.access(candidate, os.X_OK):
+            return str(candidate)
+    return None
+
+
 def exists(cmd: str) -> bool:
-    return shutil.which(cmd) is not None
+    return command_path(cmd) is not None
+
+
+def command_or_name(cmd: str) -> str:
+    return command_path(cmd) or cmd
 
 
 def first_existing_path(candidates: list[Path | None], fallback: Path) -> Path:
@@ -71,16 +149,26 @@ def root_cmd(cmd: list[str]) -> list[str]:
     return cmd
 
 
-def require_root(action: str) -> bool:
-    if os.geteuid() == 0:
-        return True
-    print(f"{action} needs administrator permission.")
-    print(f"Run: sudo walnut {action}")
-    return False
-
-
 def section(title: str) -> None:
-    print(f"\n== {title} ==")
+    print(color(f"\n== {title} ==", PALETTE["ai"]))
+
+
+def color(text: str, code: str) -> str:
+    if not COLOR_ENABLED:
+        return text
+    return f"\033[{code}m{text}\033[0m"
+
+
+def title(text: str, code: str | None = None) -> None:
+    print(color(text, code or PALETTE["home"]))
+
+
+def choice_line(key: str, label: str, code: str) -> None:
+    print(f"  {color(key + '.', PALETTE['key'])} {color(label, code)}")
+
+
+def back_line() -> None:
+    print(f"  {color('b.', PALETTE['key'])} {color('Back', PALETTE['back'])}")
 
 
 def pause(prompt: str = "Press Enter...") -> None:
@@ -111,6 +199,8 @@ def prepare_music() -> tuple[Path, Path, Path]:
     current_music_dir = music_dir()
     MUSIC_LINK.parent.mkdir(parents=True, exist_ok=True)
     CMUS_PLAYLIST.parent.mkdir(parents=True, exist_ok=True)
+    CMUS_HOME.mkdir(parents=True, exist_ok=True)
+    CMUS_HOME.chmod(0o700)
 
     if current_music_dir.exists():
         try:
@@ -131,11 +221,56 @@ def prepare_music() -> tuple[Path, Path, Path]:
             encoding="utf-8",
         )
 
+    CMUS_RC.write_text(
+        "set mpris=false\n",
+        encoding="utf-8",
+    )
+
     return current_music_dir, MUSIC_LINK, CMUS_PLAYLIST
+
+
+def cmus_env() -> dict[str, str]:
+    env = {"CMUS_HOME": str(CMUS_HOME), "CMUS_SOCKET": str(CMUS_SOCKET)}
+    runtime_dir = os.environ.get("XDG_RUNTIME_DIR")
+    if runtime_dir and os.access(runtime_dir, os.W_OK | os.X_OK):
+        return env
+
+    fallback = HOME / ".cache" / "walnut-runtime"
+    try:
+        fallback.mkdir(parents=True, exist_ok=True)
+        fallback.chmod(0o700)
+    except OSError:
+        return env
+    env["XDG_RUNTIME_DIR"] = str(fallback)
+    return env
+
+
+def load_cmus_playlist_later(playlist: Path, env: dict[str, str]) -> None:
+    if not exists("cmus-remote"):
+        return
+    loader_env = os.environ.copy()
+    loader_env.update(env)
+    loader = (
+        'i=0; while [ "$i" -lt 80 ]; do '
+        'if [ -S "$CMUS_SOCKET" ]; then '
+        'cmus-remote --server "$CMUS_SOCKET" -l -c "$1" >/dev/null 2>&1 && '
+        'cmus-remote --server "$CMUS_SOCKET" -P -c "$1" >/dev/null 2>&1 && '
+        '{ cmus-remote --server "$CMUS_SOCKET" -C "view 3" >/dev/null 2>&1 || true; exit 0; }; '
+        "fi; "
+        'i=$((i + 1)); sleep 0.1; '
+        "done"
+    )
+    subprocess.Popen(
+        ["sh", "-c", loader, "walnut-cmus-loader", str(playlist)],
+        env=loader_env,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
 
 
 def launch_cmus() -> int:
     current_music_dir, current_music_link, current_playlist = prepare_music()
+    env = cmus_env()
     clear_screen()
     print("cmus quick keys:")
     print("  2        library view")
@@ -153,61 +288,172 @@ def launch_cmus() -> int:
     print("\nLaunching cmus with WalnutMusic loaded. Use q to quit cmus.\n")
 
     if current_playlist.exists() and current_playlist.stat().st_size > 0:
-        return stream(["cmus", str(current_playlist)])
+        load_cmus_playlist_later(current_playlist, env)
+        return stream(["cmus"], env=env)
     if current_music_link.exists():
-        return stream(["cmus", str(current_music_link)])
-    return stream(["cmus"])
+        return stream(["cmus", str(current_music_link)], env=env)
+    return stream(["cmus"], env=env)
 
 
 def launch_matrix() -> int:
     clear_screen()
-    print("cmatrix quick keys:")
-    print("  Ctrl+C    quit and return to Walnut")
+    title("cmatrix quick keys:", PALETTE["matrix"])
+    print(f"  {color('Ctrl+C', PALETTE['hint'])}    quit and return to Walnut")
     print()
     print("Recommended options:")
     print("  -a        asynchronous scroll")
     print("  -b        bold characters")
+    print("  -r        rainbow mode")
     print("  ASCII mode avoids missing-glyph squares on the small framebuffer screen")
     print("\nLaunching cmatrix. Press Ctrl+C to quit.\n")
-    return stream(["cmatrix", "-ab"])
-
-
-def launch_browser() -> int:
-    if exists("w3m"):
-        return stream(["w3m", BROWSER_URL])
-    if exists("lynx"):
-        return stream(["lynx", BROWSER_URL])
-    print("No terminal browser found. Install w3m or lynx.")
-    return 1
-
-
-def launch_monitor() -> int:
-    size = shutil.get_terminal_size(fallback=(80, 24))
-    if size.columns >= 100 and exists("btop"):
-        return stream(["btop"])
-    if exists("htop"):
-        return stream(["htop"])
-    if exists("btop"):
-        return stream(["btop"])
-    print("No process monitor found. Install htop or btop.")
-    return 1
+    return stream(["cmatrix", "-ab", "-r"])
 
 
 def launch_clock() -> int:
-    return stream(["tty-clock", "-c", "-s"])
+    return stream(["tty-clock", "-c", "-s", "-C", "6", "-b"])
+
+
+def launch_effect(title: str, command: str, args: list[str] | None = None, quit_hint: str = "Ctrl+C") -> int:
+    clear_screen()
+    if not exists(command):
+        print(f"{command} is missing")
+        pause()
+        return 1
+    print(color(f"{title} quick keys:", PALETTE["screen"]))
+    print(f"  {color(quit_hint, PALETTE['hint'])}    quit and return to Walnut")
+    print()
+    print(f"Launching {command}.")
+    return stream([command_or_name(command), *(args or [])])
+
+
+def launch_pipes() -> int:
+    return launch_effect("pipes", "pipes", ["-p", "4", "-R", "-K", "-f", "60"])
+
+
+def launch_aafire() -> int:
+    return launch_effect("aafire", "aafire")
+
+
+def launch_cacafire() -> int:
+    return launch_effect("cacafire", "cacafire")
+
+
+def launch_nyancat() -> int:
+    return launch_effect("nyancat", "nyancat")
+
+
+def launch_cacademo() -> int:
+    return launch_effect("cacademo", "cacademo", quit_hint="q or Ctrl+C")
+
+
+def launch_train() -> int:
+    clear_screen()
+    if not exists("sl"):
+        print("sl is missing")
+        pause()
+        return 1
+    return stream([command_or_name("sl"), "-e"])
+
+
+def launch_banner() -> int:
+    clear_screen()
+    text = input("Text [WalnutPi]> ").strip() or "WalnutPi"
+    if exists("toilet"):
+        rc = stream([command_or_name("toilet"), "-t", "--gay", text])
+        pause()
+        return rc
+    if exists("figlet"):
+        rc = stream([command_or_name("figlet"), text])
+        pause()
+        return rc
+    print("toilet or figlet is missing")
+    pause()
+    return 1
+
+
+def launch_fortune_cow() -> int:
+    clear_screen()
+    if exists("fortune") and exists("cowsay"):
+        if exists("lolcat"):
+            rc = stream(["sh", "-c", "fortune -s | cowsay | lolcat -f"])
+        else:
+            rc = stream(["sh", "-c", "fortune -s | cowsay"])
+    elif exists("fortune"):
+        rc = stream([command_or_name("fortune"), "-s"])
+    elif exists("cowsay"):
+        rc = stream([command_or_name("cowsay"), "WalnutPi is waiting for fortunes."])
+    else:
+        print("fortune or cowsay is missing")
+        pause()
+        return 1
+    pause()
+    return rc
+
+
+def launch_quote_box() -> int:
+    clear_screen()
+    if not exists("boxes"):
+        print("boxes is missing")
+        pause()
+        return 1
+    if exists("fortune"):
+        if exists("lolcat"):
+            rc = stream(["sh", "-c", "fortune -s | boxes | lolcat -f"])
+        else:
+            rc = stream(["sh", "-c", "fortune -s | boxes"])
+    else:
+        if exists("lolcat"):
+            rc = stream(["sh", "-c", "printf '%s\\n' 'WalnutPi' | boxes | lolcat -f"])
+        else:
+            rc = stream(["sh", "-c", "printf '%s\\n' 'WalnutPi' | boxes"])
+    pause()
+    return rc
+
+
+def alsa_capture_source() -> str | None:
+    if not exists("arecord"):
+        return None
+    out = run(["arecord", "-l"]).stdout
+    for line in out.splitlines():
+        match = re.search(r"card\s+(\d+):.*device\s+(\d+):", line)
+        if match:
+            return f"hw:{match.group(1)},{match.group(2)}"
+    return None
+
+
+def prepare_cava_config() -> Path | None:
+    source = os.getenv("WALNUT_CAVA_SOURCE") or alsa_capture_source()
+    if not source:
+        return None
+
+    CAVA_CONFIG.parent.mkdir(parents=True, exist_ok=True)
+    CAVA_CONFIG.write_text(
+        "\n".join(
+            [
+                "[general]",
+                "framerate = 30",
+                "",
+                "[input]",
+                "method = alsa",
+                f"source = {source}",
+                "",
+                "[output]",
+                "method = ncurses",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    return CAVA_CONFIG
 
 
 def launch_music_visualizer() -> int:
     if exists("cava"):
+        config = prepare_cava_config()
+        if config:
+            return stream(["cava", "-p", str(config)])
         return stream(["cava"])
     print("cava is missing")
-    return 1
-
-
-def open_cn(_: argparse.Namespace | None = None) -> int:
-    if exists("walnut-cn"):
-        return stream(["walnut-cn"])
-    print("walnut-cn is missing")
     return 1
 
 
@@ -223,12 +469,12 @@ def open_video(args: argparse.Namespace | None = None) -> int:
 def notes_menu(_: argparse.Namespace | None = None) -> int:
     while True:
         clear_screen()
-        print("Walnut Notes")
+        title("Walnut Notes", PALETTE["ai"])
         print()
-        print("  1. Add note")
-        print("  2. Today")
+        choice_line("1", "Add note", PALETTE["notes"])
+        choice_line("2", "Today", PALETTE["status"])
         print()
-        print("  b. Back")
+        back_line()
         choice = input("\nSelect> ").strip().lower()
         if choice == "1":
             text = input("Note> ").strip()
@@ -245,12 +491,12 @@ def notes_menu(_: argparse.Namespace | None = None) -> int:
 def play_video_menu(_: argparse.Namespace | None = None) -> int:
     while True:
         clear_screen()
-        print("Walnut ASCII Video")
+        title("Walnut ASCII Video", PALETTE["video"])
         print()
-        print("  1. Color demo")
-        print("  2. Gray demo")
+        choice_line("1", "Color demo", PALETTE["play"])
+        choice_line("2", "Gray demo", PALETTE["demo"])
         print()
-        print("  b. Back")
+        back_line()
         choice = input("\nSelect> ").strip().lower()
         if choice == "1":
             open_video(argparse.Namespace(mode="color"))
@@ -260,18 +506,15 @@ def play_video_menu(_: argparse.Namespace | None = None) -> int:
             return 0
 
 
-def play_menu(_: argparse.Namespace | None = None) -> int:
+def play_music_menu(_: argparse.Namespace | None = None) -> int:
     while True:
         clear_screen()
-        print("Walnut Play")
+        title("Walnut Music", PALETTE["music"])
         print()
-        print("  1. Music Player")
-        print("  2. Music Visualizer")
-        print("  3. Matrix Rain")
-        print("  4. ASCII Video")
-        print("  5. Clock")
+        choice_line("1", "Music Player", PALETTE["notes"])
+        choice_line("2", "Music Visualizer", PALETTE["nyan"])
         print()
-        print("  b. Back")
+        back_line()
         choice = input("\nSelect> ").strip().lower()
         if choice == "1":
             launch_cmus()
@@ -279,57 +522,87 @@ def play_menu(_: argparse.Namespace | None = None) -> int:
             clear_screen()
             print("Launching cava. Tip: play music in another terminal first. Press q or Ctrl+C to quit.")
             launch_music_visualizer()
-        elif choice == "3":
+        elif choice in {"b", "back", "q", "quit", "exit"}:
+            return 0
+
+
+def play_screen_menu(_: argparse.Namespace | None = None) -> int:
+    while True:
+        clear_screen()
+        title("Walnut Screen", PALETTE["screen"])
+        print()
+        choice_line("1", "Matrix Rain", PALETTE["matrix"])
+        choice_line("2", "Pipes", PALETTE["pipes"])
+        choice_line("3", "ASCII Fire", PALETTE["fire"])
+        choice_line("4", "Color Fire", PALETTE["hot"])
+        choice_line("5", "Nyancat", PALETTE["nyan"])
+        choice_line("6", "Caca Demo", PALETTE["caca"])
+        choice_line("7", "ASCII Video", PALETTE["video"])
+        choice_line("8", "Clock", PALETTE["status"])
+        print()
+        back_line()
+        choice = input("\nSelect> ").strip().lower()
+        if choice == "1":
             launch_matrix()
+        elif choice == "2":
+            launch_pipes()
+        elif choice == "3":
+            launch_aafire()
         elif choice == "4":
-            play_video_menu(None)
+            launch_cacafire()
         elif choice == "5":
+            launch_nyancat()
+        elif choice == "6":
+            launch_cacademo()
+        elif choice == "7":
+            play_video_menu(None)
+        elif choice == "8":
             launch_clock()
         elif choice in {"b", "back", "q", "quit", "exit"}:
             return 0
 
 
-def console_menu(_: argparse.Namespace | None = None) -> int:
+def play_toys_menu(_: argparse.Namespace | None = None) -> int:
     while True:
         clear_screen()
-        print("Walnut Console")
+        title("Walnut One-shot Toys", PALETTE["toys"])
         print()
-        print("  1. Chinese framebuffer console")
+        choice_line("1", "Steam Locomotive", PALETTE["fire"])
+        choice_line("2", "Big Text", PALETTE["nyan"])
+        choice_line("3", "Fortune Cow", PALETTE["notes"])
+        choice_line("4", "Quote Box", PALETTE["status"])
         print()
-        print("  b. Back")
+        back_line()
         choice = input("\nSelect> ").strip().lower()
         if choice == "1":
-            open_cn(None)
+            launch_train()
+        elif choice == "2":
+            launch_banner()
+        elif choice == "3":
+            launch_fortune_cow()
+        elif choice == "4":
+            launch_quote_box()
         elif choice in {"b", "back", "q", "quit", "exit"}:
             return 0
 
 
-def maintenance_menu(_: argparse.Namespace | None = None) -> int:
+def play_menu(_: argparse.Namespace | None = None) -> int:
     while True:
         clear_screen()
-        print("Walnut Maintenance")
+        title("Walnut Play", PALETTE["home"])
         print()
-        print("  1. Fix AirPods audio")
-        print("  2. Projects")
-        print("  3. Clean")
-        print("  4. Web Browser")
-        print("  5. Monitor")
+        choice_line("1", "Music", PALETTE["music"])
+        choice_line("2", "Screen", PALETTE["screen"])
+        choice_line("3", "One-shot Toys", PALETTE["play"])
         print()
-        print("  b. Back")
+        back_line()
         choice = input("\nSelect> ").strip().lower()
         if choice == "1":
-            fix_audio(None)
-            pause()
+            play_music_menu(None)
         elif choice == "2":
-            projects(None)
-            pause()
+            play_screen_menu(None)
         elif choice == "3":
-            clean(None)
-            pause()
-        elif choice == "4":
-            launch_browser()
-        elif choice == "5":
-            launch_monitor()
+            play_toys_menu(None)
         elif choice in {"b", "back", "q", "quit", "exit"}:
             return 0
 
@@ -352,7 +625,7 @@ def status(_: argparse.Namespace | None = None) -> int:
     print(one_line(["free", "-h"]))
 
     section("Services")
-    for service in ["ssh", "NetworkManager", "docker", "frpc", "voice-keyboard-walnutpi", "bluealsa-aplay", "bluetooth"]:
+    for service in ["ssh", "NetworkManager", "docker", "frpc", "bluealsa-aplay", "bluetooth"]:
         state = one_line(root_cmd(["systemctl", "is-active", service]), "unknown")
         enabled = one_line(root_cmd(["systemctl", "is-enabled", service]), "unknown")
         print(f"{service:26} active={state:10} enabled={enabled}")
@@ -368,51 +641,6 @@ def status(_: argparse.Namespace | None = None) -> int:
 
     section("Audio")
     print(one_line(["bluetoothctl", "info", AIRPODS_MAC], "AirPods not known"))
-    return 0
-
-
-def clean(_: argparse.Namespace | None = None) -> int:
-    if not require_root("clean"):
-        return 1
-    print("Walnut clean keeps projects, music, Codex config, GitHub login, Docker data, and Uptime Kuma data.")
-    print("Cleaning apt cache, old journals, and old temp files...")
-    commands = [
-        root_cmd(["apt-get", "clean"]),
-        root_cmd(["journalctl", "--vacuum-size=50M"]),
-        ["find", "/tmp", "-mindepth", "1", "-maxdepth", "1", "-mtime", "+1", "-delete"],
-        ["find", "/var/tmp", "-mindepth", "1", "-maxdepth", "1", "-mtime", "+7", "-delete"],
-    ]
-    for cmd in commands:
-        print(f"$ {' '.join(cmd)}")
-        subprocess.call(cmd)
-    section("After Clean")
-    print(one_line(["df", "-h", "/"]))
-    return 0
-
-
-def fix_audio(_: argparse.Namespace | None = None) -> int:
-    if not require_root("fix-audio"):
-        return 1
-    print("Switching Bluetooth audio back to PulseAudio A2DP playback mode.")
-    subprocess.call(root_cmd(["systemctl", "disable", "--now", "bluealsa-aplay"]))
-    subprocess.call(root_cmd(["systemctl", "disable", "--now", "bluealsa"]))
-    subprocess.call(root_cmd(["pkill", "-f", "^/usr/bin/bluealsa-aplay"]))
-    if exists("vk-airpods-audio"):
-        return stream(["vk-airpods-audio"])
-    print("vk-airpods-audio is missing")
-    return 1
-
-
-def projects(_: argparse.Namespace | None = None) -> int:
-    section("Projects")
-    for path in [project_root(), HOME / "projects" / "voice-keyboard", Path("/opt/walnut-ai"), Path("/opt/uptime-kuma"), Path("/opt/frp")]:
-        if path.exists():
-            print(path)
-    section("Git")
-    current_root = project_root()
-    if current_root.exists():
-        subprocess.call(["git", "config", "--global", "--add", "safe.directory", str(current_root)])
-        subprocess.call(["git", "-C", str(current_root), "status", "--short"])
     return 0
 
 
@@ -455,19 +683,16 @@ def voice(_: argparse.Namespace | None = None) -> int:
 def menu(_: argparse.Namespace | None = None) -> int:
     while True:
         clear_screen()
-        print("Walnut Home")
+        title("Walnut Home", PALETTE["home"])
         print()
-        print("  1. AI Chat")
-        print("  2. Notes")
-        print("  3. Play")
-        print("  4. Console")
-        print("  5. Status")
-        print("  6. Maintenance")
-        print("  7. Voice")
+        choice_line("1", "AI Chat", PALETTE["pipes"])
+        choice_line("2", "Notes", PALETTE["notes"])
+        choice_line("3", "Play", PALETTE["play"])
+        choice_line("4", "Status", PALETTE["status"])
         if os.getenv("WALNUT_SESSION_MODE") == "local":
-            print("  8. Return to login")
+            choice_line("5", "Return to login", PALETTE["back"])
         print()
-        print("  q. Back to Walnut menu")
+        print(f"  {color('q.', PALETTE['key'])} {color('Back to Walnut menu', PALETTE['back'])}")
         choice = input("\nSelect> ").strip().lower()
         if choice == "1":
             open_ai(None)
@@ -476,15 +701,9 @@ def menu(_: argparse.Namespace | None = None) -> int:
         elif choice == "3":
             play_menu(None)
         elif choice == "4":
-            console_menu(None)
-        elif choice == "5":
             status(None)
             input("\nPress Enter...")
-        elif choice == "6":
-            maintenance_menu(None)
-        elif choice == "7":
-            voice(None)
-        elif choice == "8" and os.getenv("WALNUT_SESSION_MODE") == "local":
+        elif choice == "5" and os.getenv("WALNUT_SESSION_MODE") == "local":
             return 2
         elif choice in {"q", "quit", "exit"}:
             return 0
@@ -499,8 +718,6 @@ def build_parser() -> argparse.ArgumentParser:
         "ai": open_ai,
         "notes": notes_menu,
         "play": play_menu,
-        "console": console_menu,
-        "maintenance": maintenance_menu,
         "video": open_video,
         "voice": voice,
         "today": today,

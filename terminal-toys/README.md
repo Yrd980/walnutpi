@@ -10,15 +10,21 @@
 walnut
 ```
 
-主启动器已经统一到 `walnut`。这里面的工具通过 `walnut play` 打开，包含音乐、数字雨、时钟和 ASCII 视频演示，底层主要依赖 `cmatrix` 和 `tty-clock`。
+主启动器已经统一到 `walnut`。这里面的工具通过 `walnut play` 打开，包含音乐、屏幕演示和一次性终端玩具。
 
-推荐先试：
+`walnut play` 按用途分成三类：
 
-- `1` 音乐播放器
-- `2` 音乐可视化
-- `3` 数字雨
-- `4` ASCII 视频
-- `5` 时钟
+- `Music`：音乐播放器和音乐可视化
+- `Screen`：数字雨、管道、火焰、Nyancat、ASCII demo、ASCII 视频和时钟，适合本地小屏展示
+- `One-shot Toys`：蒸汽小火车、大字横幅、fortune/cowsay 和 quote box
+
+Walnut 菜单会使用 ANSI 颜色区分分类和入口。SSH / kitty 这类现代终端使用 256 色；本地 `fbterm` / Linux console 会自动降级到基础 16 色，避免小屏颜色被错误映射成一层灰雾。如果当前终端不适合显示颜色，可以用 `NO_COLOR=1 walnut play` 关闭菜单颜色。支持彩色输出的玩具会优先使用彩色模式，例如彩虹数字雨、彩色时钟、彩色管道和 `lolcat` 输出。
+
+安装或补齐终端玩具：
+
+```bash
+sudo ./scripts/install-terminal-toys.sh
+```
 
 兼容入口：
 
@@ -46,16 +52,21 @@ terminal-toys/walnut-fun
 
 ## 已安装工具
 
-| 工具 | 用途 | 命令 |
-| --- | --- | --- |
-| cmus | 终端音乐播放器 | `cmus` |
-| cmatrix | 数字雨终端效果 | `cmatrix -ab` |
-| cava | 音乐可视化 | `cava` |
-| w3m | 终端网页浏览器 | `w3m` |
-| lynx | 终端网页浏览器备用 | `lynx` |
-| btop | 大屏系统监控 | `btop` |
-| htop | 紧凑型系统监控 | `htop` |
-| tty-clock | 终端时钟 | `tty-clock` |
+| 分类 | 工具 | 用途 | 命令 |
+| --- | --- | --- | --- |
+| Music | cmus | 终端音乐播放器 | `cmus` |
+| Music | cava | 音乐可视化 | `cava` |
+| Screen | cmatrix | 彩虹数字雨终端效果 | `cmatrix -ab -r` |
+| Screen | pipes-sh | 彩色管道屏保 | `pipes -p 4 -R -K -f 60` |
+| Screen | libaa-bin | ASCII 火焰 | `aafire` |
+| Screen | caca-utils | 彩色火焰和 libcaca demo | `cacafire`, `cacademo` |
+| Screen | nyancat | 终端 Nyancat 动画 | `nyancat` |
+| Screen | tty-clock | 彩色终端时钟 | `tty-clock -c -s -C 6 -b` |
+| One-shot Toys | sl | 一次性蒸汽小火车 | `sl -e` |
+| One-shot Toys | toilet | 彩虹终端大字横幅 | `toilet -t --gay TEXT` |
+| One-shot Toys | fortune / cowsay | 彩色随机短句和气泡输出 | `fortune -s \| cowsay \| lolcat -f` |
+| One-shot Toys | boxes | 给短句加彩色 ASCII 边框 | `fortune -s \| boxes \| lolcat -f` |
+| One-shot Toys | lolcat | 可选彩色输出 | `lolcat -f` |
 
 ## 音乐库
 
@@ -68,14 +79,14 @@ $HOME/Music/WalnutMusic -> $HOME/music-library
 同时会生成 `cmus` 播放列表：
 
 ```bash
-$HOME/.config/cmus/walnut-library.pls
+$HOME/.config/cmus/walnut-library.m3u
 ```
 
-当前本地音乐库里放了 14 首 public-domain 测试曲目，目录在 `$HOME/music-library`。
+当前板子上的测试音乐库放在 `/home/pi/music-library`，包含 14 首 Walnut Demo 合成 WAV。root 侧 `/root/music-library` 会软链接到同一目录。
+
+`walnut play` 里的 Music Visualizer 会生成 `$HOME/.config/walnut-cava/config`，默认使用第一个 ALSA capture 设备，避免在无 PulseAudio 会话的终端里启动后立即退出。
 
 ## 小屏幕说明
-
-板载 WalnutPi 屏幕只有 480x320。`walnut maintenance` 里用 `htop` 作为小屏系统监控，`btop` 保留给 SSH 里的大终端场景。
 
 `cmatrix` 很适合这块内屏，因为它直接跑在终端里，不需要 X11 或 Wayland。在本地设备上，它最适合从这个仓库里已经使用的 framebuffer 终端路径启动。
 
@@ -86,19 +97,3 @@ Could not initialize video: No video mode large enough for 640x400
 ```
 
 因此不要把 DOSBox 作为 Walnut Play 的默认本地小屏工具。若要运行 DOSBox，应使用外接更高分辨率显示、远程图形环境，或选择能明确适配 480x320 framebuffer 的替代方案。
-
-## AirPods 播放说明
-
-如果要用 AirPods 播放，请保持蓝牙处于 A2DP 音乐模式：
-
-```bash
-vk-airpods-audio
-```
-
-如果声音只能播放一小会儿就消失，可能是 BlueALSA 抢占了蓝牙设备。正常播放时请继续使用 PulseAudio 作为播放路径：
-
-```bash
-systemctl disable --now bluealsa
-pkill -f '^/usr/bin/bluealsa-aplay' || true
-vk-airpods-audio
-```
