@@ -60,7 +60,7 @@ PALETTE_256 = {
     "pipes": "38;5;117",
     "fire": "38;5;208",
     "hot": "38;5;196",
-    "nyan": "38;5;213",
+    "accent": "38;5;213",
     "demo": "38;5;250",
     "caca": "38;5;201",
     "video": "38;5;51",
@@ -82,7 +82,7 @@ PALETTE_LOCAL = {
     "pipes": "1;36",
     "fire": "1;33",
     "hot": "1;31",
-    "nyan": "1;35",
+    "accent": "1;35",
     "demo": "1;37",
     "caca": "1;35",
     "video": "1;36",
@@ -508,7 +508,7 @@ def play_music_menu(_: argparse.Namespace | None = None) -> int:
         title("Walnut Music", PALETTE["music"])
         print()
         choice_line("1", "Music Player", PALETTE["notes"])
-        choice_line("2", "Music Visualizer", PALETTE["nyan"])
+        choice_line("2", "Music Visualizer", PALETTE["accent"])
         print()
         back_line()
         choice = input("\nSelect> ").strip().lower()
@@ -561,7 +561,7 @@ def play_toys_menu(_: argparse.Namespace | None = None) -> int:
         title("Walnut One-shot Toys", PALETTE["toys"])
         print()
         choice_line("1", "Steam Locomotive", PALETTE["fire"])
-        choice_line("2", "Big Text", PALETTE["nyan"])
+        choice_line("2", "Big Text", PALETTE["accent"])
         choice_line("3", "Fortune Cow", PALETTE["notes"])
         choice_line("4", "Quote Box", PALETTE["status"])
         print()
