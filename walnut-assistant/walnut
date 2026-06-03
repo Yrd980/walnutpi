@@ -659,9 +659,10 @@ def today(_: argparse.Namespace | None = None) -> int:
     return 0
 
 
-def open_ai(_: argparse.Namespace | None = None) -> int:
+def open_ai(args: argparse.Namespace | None = None) -> int:
     if exists("walnut-ai"):
-        return stream(["walnut-ai"])
+        text = getattr(args, "text", []) or []
+        return stream(["walnut-ai", *text] if text else ["walnut-ai"])
     print("walnut-ai is missing")
     return 1
 
@@ -717,6 +718,8 @@ def build_parser() -> argparse.ArgumentParser:
     }
     for name, func in commands.items():
         p = sub.add_parser(name)
+        if name == "ai":
+            p.add_argument("text", nargs="*")
         if name == "video":
             p.add_argument("mode", nargs="?", choices=["color", "gray", "still-color", "still-gray"], default="color")
         p.set_defaults(func=func)

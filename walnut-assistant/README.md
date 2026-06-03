@@ -13,6 +13,7 @@ walnut
 ```bash
 walnut                 # 交互式菜单
 walnut ai              # 打开 WalnutAI 聊天
+walnut ai TEXT         # 向 WalnutAI 提一个一次性 agent 请求
 walnut notes           # 笔记子菜单
 walnut play            # 打开 Music、Screen 和 One-shot Toys 分类
 walnut status          # 系统、网络、服务、Docker、蓝牙状态
@@ -25,6 +26,7 @@ walnut today           # 显示今天的笔记
 较少直接使用的命令：
 
 - `walnut status`：设备、网络和服务检查
+- `walnut ai TEXT`：一次性 agent 回合；能由核桃派本地查询或执行的请求，应先用本地能力处理，再总结给用户
 - `walnut video color|gray`：直接播放 ASCII 视频
 - `walnut note TEXT` 和 `walnut today`：快速记笔记
 - `walnut voice`：语音键盘 CLI；主菜单暂时隐藏，等接入麦克风和 STT 凭据后再测试

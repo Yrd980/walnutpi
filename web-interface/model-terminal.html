@@ -225,6 +225,23 @@
         white-space: nowrap;
       }
 
+      .output-block {
+        max-height: 180px;
+        overflow: auto;
+        border-radius: 6px;
+        padding: 8px;
+        background: rgba(0, 0, 0, 0.26);
+        color: #d8e7dc;
+        font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+        font-size: 11px;
+        line-height: 1.38;
+        white-space: pre-wrap;
+      }
+
+      .message.is-error {
+        border-color: rgba(214, 107, 101, 0.36);
+      }
+
       .quick-grid {
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -639,42 +656,42 @@
           </article>
         </div>
 
-        <div class="quick-grid" aria-label="常用操作">
-          <button class="quick-action" type="button" data-intent="status">
+        <div class="quick-grid" aria-label="示例请求">
+          <button class="quick-action" type="button" data-prompt="我想知道核桃派现在还好吗">
             <span class="quick-icon" aria-hidden="true">
               <svg viewBox="0 0 24 24"><path d="M4 19V5" /><path d="M4 19h16" /><path d="M8 16v-5" /><path d="M12 16V8" /><path d="M16 16v-3" /></svg>
             </span>
-            <span class="quick-title">查状态</span>
+            <span class="quick-title">核桃派状态</span>
           </button>
-          <button class="quick-action" type="button" data-intent="ai">
+          <button class="quick-action" type="button" data-prompt="帮我看一下网络">
             <span class="quick-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24"><path d="M12 2v3" /><path d="M12 19v3" /><path d="m4.9 4.9 2.1 2.1" /><path d="m17 17 2.1 2.1" /><path d="M2 12h3" /><path d="M19 12h3" /><path d="m4.9 19.1 2.1-2.1" /><path d="m17 7 2.1-2.1" /><circle cx="12" cy="12" r="4" /></svg>
+              <svg viewBox="0 0 24 24"><path d="M5 13a10 10 0 0 1 14 0" /><path d="M8.5 16.5a5 5 0 0 1 7 0" /><path d="M12 20h.01" /><path d="M2 9a15 15 0 0 1 20 0" /></svg>
             </span>
-            <span class="quick-title">AI 终端</span>
+            <span class="quick-title">网络检查</span>
           </button>
-          <button class="quick-action" type="button" data-intent="play">
+          <button class="quick-action" type="button" data-prompt="我想接一个 I2C 传感器">
             <span class="quick-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24"><path d="M5 5h14v14H5z" /><path d="m10 8 6 4-6 4V8z" /></svg>
+              <svg viewBox="0 0 24 24"><path d="M9 3v18" /><path d="M15 3v18" /><path d="M3 9h18" /><path d="M3 15h18" /><circle cx="9" cy="9" r="1" /><circle cx="15" cy="15" r="1" /></svg>
             </span>
-            <span class="quick-title">屏幕演示</span>
+            <span class="quick-title">I2C 接线</span>
           </button>
-          <button class="quick-action" type="button" data-intent="video">
-            <span class="quick-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24"><path d="M3 7h18" /><path d="M3 17h18" /><path d="M7 3v18" /><path d="M17 3v18" /></svg>
-            </span>
-            <span class="quick-title">彩色视频</span>
-          </button>
-          <button class="quick-action" type="button" data-intent="notes">
+          <button class="quick-action" type="button" data-prompt="今天记了什么">
             <span class="quick-icon" aria-hidden="true">
               <svg viewBox="0 0 24 24"><path d="M6 3h9l3 3v18H6z" /><path d="M14 3v5h5" /><path d="M9 13h6" /><path d="M9 17h6" /></svg>
             </span>
             <span class="quick-title">今天笔记</span>
           </button>
-          <button class="quick-action" type="button" data-intent="home">
+          <button class="quick-action" type="button" data-prompt="记一下今天调好了 Wi-Fi">
             <span class="quick-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24"><path d="m3 11 9-8 9 8" /><path d="M5 10v10h14V10" /><path d="M9 20v-6h6v6" /></svg>
+              <svg viewBox="0 0 24 24"><path d="M6 3h9l3 3v18H6z" /><path d="M14 3v5h5" /><path d="M9 13h6" /><path d="M9 17h6" /></svg>
             </span>
-            <span class="quick-title">主菜单</span>
+            <span class="quick-title">记一下</span>
+          </button>
+          <button class="quick-action" type="button" data-prompt="上海天气怎么样">
+            <span class="quick-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M12 2v3" /><path d="M12 19v3" /><path d="m4.9 4.9 2.1 2.1" /><path d="m17 17 2.1 2.1" /><path d="M2 12h3" /><path d="M19 12h3" /><path d="m4.9 19.1 2.1-2.1" /><path d="m17 7 2.1-2.1" /><circle cx="12" cy="12" r="4" /></svg>
+            </span>
+            <span class="quick-title">上海天气</span>
           </button>
         </div>
 
@@ -682,7 +699,7 @@
           <input
             id="assistantInput"
             autocomplete="off"
-            placeholder="说：查看状态、打开 AI、记一下..."
+            placeholder="你想让核桃派做什么？"
             type="text"
           />
           <button class="send-button" type="submit" aria-label="发送">
@@ -807,32 +824,36 @@
 
       const actions = {
         status: {
-          command: "walnut status",
-          reply: "我会查看核桃派的系统、网络和服务状态。",
+          id: "status",
+          reply: "我会通过白名单动作读取核桃派状态。",
         },
-        ai: {
-          command: "walnut ai",
-          reply: "我会进入 WalnutAI 终端，右侧会出现 walnut>。",
+        snapshot: {
+          id: "snapshot",
+          reply: "我会先做只读设备快照，确认板子和 overlay。",
         },
-        play: {
-          command: "walnut play",
-          reply: "我会打开 Walnut Play 菜单。",
+        network: {
+          id: "network",
+          reply: "我会检查 IP、路由和 Wi-Fi 状态。",
+        },
+        gpio: {
+          id: "gpio",
+          reply: "我会只读检查 GPIO、总线和 overlay。",
+        },
+        ask: {
+          reply: "直接在下面输入问题，我会通过 CLI 调用 WalnutAI，由它判断是否需要先执行本地安全动作。",
+          run: () => assistantInput.focus(),
         },
         video: {
-          command: "walnut video color",
-          reply: "我会播放彩色 ASCII 视频演示。",
+          id: "video",
+          reply: "我会直接运行彩色 ASCII 视频命令，不打开 Walnut Play 菜单。",
         },
         notes: {
-          command: "walnut today",
-          reply: "我会显示今天保存的笔记。",
-        },
-        home: {
-          command: "walnut",
-          reply: "我会打开 Walnut Home 主菜单。",
+          id: "notes",
+          reply: "我会读取今天保存的核桃派笔记。",
         },
         clear: {
-          command: "clear",
           reply: "我会清空右侧终端。",
+          run: () => term.clear(),
         },
         reconnect: {
           reply: "我会重新连接核桃派。",
@@ -924,9 +945,10 @@
         chatDot.classList.toggle("is-closed", state === "closed");
       }
 
-      function addMessage(role, text, command = "") {
+      function addMessage(role, text, options = {}) {
         const message = document.createElement("article");
         message.className = `message ${role}`;
+        message.classList.toggle("is-error", options.error === true);
 
         const meta = document.createElement("span");
         meta.className = "message-meta";
@@ -938,47 +960,63 @@
 
         message.append(meta, body);
 
-        if (command) {
+        if (options.command) {
           const commandView = document.createElement("div");
           commandView.className = "command-pill";
-          commandView.textContent = command;
+          commandView.textContent = options.command;
           message.append(commandView);
+        }
+
+        if (options.output) {
+          const outputView = document.createElement("pre");
+          outputView.className = "output-block";
+          outputView.textContent = options.output;
+          message.append(outputView);
         }
 
         chatLog.append(message);
         chatLog.scrollTop = chatLog.scrollHeight;
       }
 
-      function shellQuote(value) {
-        return "'" + value.replace(/'/g, "'\\''") + "'";
-      }
-
       function actionForText(text) {
         const trimmed = text.trim();
         const lower = trimmed.toLowerCase();
-        const note = trimmed.match(/(?:记一下|记录|记住|note[:：]?)(.+)/i);
+        const aiQuestion = trimmed.match(/^(?:问一下|问ai|问 ai|ai[:：]?|聊天[:：]?)(.+)/i);
 
-        if (note && note[1].trim()) {
-          const content = note[1].trim();
+        if (aiQuestion && aiQuestion[1].trim()) {
           return {
-            command: `walnut note ${shellQuote(content)}`,
-            reply: "我会把这句话写进核桃派本地笔记。",
+            id: "ai",
+            payload: { text: aiQuestion[1].trim() },
+            reply: "我会把这句话交给 WalnutAI，由它判断是否需要先执行本地安全动作。",
           };
         }
 
         if (/清屏|clear/.test(trimmed)) return actions.clear;
         if (/重连|断开|ssh|连接/.test(lower)) return actions.reconnect;
-        if (/状态|健康|在线|内存|磁盘|服务|docker|网络|wifi|ip/.test(lower)) return actions.status;
         if (/视频|彩色|ascii|demo/.test(lower)) return actions.video;
-        if (/ai|聊天|对话|问一下|问ai|问 ai|助手/.test(lower)) return actions.ai;
-        if (/笔记|日记|今天|记了什么/.test(lower)) return actions.notes;
-        if (/玩具|播放|演示|效果|动画|play/.test(lower)) return actions.play;
-        if (/菜单|主页|home|帮助|入口/.test(lower)) return actions.home;
+        if (/玩具|播放|演示|效果|动画|play/.test(lower)) return actions.video;
 
-        return null;
+        return {
+          id: "ai",
+          payload: { text: trimmed },
+          reply: "我会把这句话交给 WalnutAI，由它判断是否需要先执行本地安全动作。",
+        };
       }
 
-      function sendCommand(command) {
+      function writeTerminalBlock(result) {
+        const lines = [
+          "",
+          `[walnut action] ${result.title || result.id}`,
+          result.command ? `$ ${result.command}` : "",
+          result.output || "",
+          result.ok ? "[done]" : "[failed]",
+          "",
+        ].filter((line) => line !== "");
+
+        term.write(`\r\n${lines.join("\r\n")}\r\n`);
+      }
+
+      function sendTerminalCommand(command) {
         if (previewOnly) {
           term.writeln(`\\r\\n[preview] ${command}`);
           return;
@@ -986,7 +1024,7 @@
 
         if (!socket || socket.readyState !== WebSocket.OPEN) {
           pendingCommand = command;
-          addMessage("assistant", "右侧还在连接，我连上后执行。", command);
+          addMessage("assistant", "右侧还在连接，我连上后执行。", { command });
           connectTerminal();
           return;
         }
@@ -995,16 +1033,57 @@
         term.focus();
       }
 
-      function runAction(action, userLabel = "") {
+      async function runAction(action, userLabel = "") {
         if (userLabel) addMessage("user", userLabel);
-        addMessage("assistant", action.reply, action.command || "");
+        addMessage("assistant", action.reply);
 
-        if (action.command) {
-          sendCommand(action.command);
+        if (action.run) {
+          action.run();
           return;
         }
 
-        action.run?.();
+        const payload = {
+          action: action.id,
+          ...(action.payload || {}),
+        };
+
+        if (previewOnly) {
+          addMessage("assistant", "预览模式下不会连接核桃派。", {
+            command: action.id,
+          });
+          return;
+        }
+
+        let result;
+        try {
+          const response = await fetch("/api/action", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+          result = await response.json();
+        } catch (error) {
+          addMessage("assistant", `动作请求失败：${error.message}`, { error: true });
+          return;
+        }
+
+        if (!result.ok && !result.output) {
+          addMessage("assistant", result.error || "动作执行失败。", { error: true });
+          return;
+        }
+
+        if (result.mode === "terminal") {
+          addMessage("assistant", result.reply, { command: result.command });
+          sendTerminalCommand(result.command);
+          return;
+        }
+
+        addMessage("assistant", result.ok ? "动作完成。" : "动作返回异常。", {
+          command: result.command,
+          output: result.output,
+          error: !result.ok,
+        });
+        writeTerminalBlock(result);
       }
 
       function connectTerminal() {
@@ -1032,7 +1111,7 @@
           if (pendingCommand) {
             const command = pendingCommand;
             pendingCommand = "";
-            window.setTimeout(() => sendCommand(command), 220);
+            window.setTimeout(() => sendTerminalCommand(command), 220);
           }
         });
 
@@ -1105,18 +1184,8 @@
         panel.classList.toggle("is-open");
       });
 
-      for (const button of document.querySelectorAll(".quick-action")) {
-        button.addEventListener("click", () => {
-          const action = actions[button.dataset.intent];
-          if (!action) return;
-          const label = button.querySelector(".quick-title").textContent;
-          runAction(action, label);
-        });
-      }
-
-      composer.addEventListener("submit", (event) => {
-        event.preventDefault();
-        const text = assistantInput.value.trim();
+      function submitPrompt(text) {
+        text = text.trim();
         if (!text) return;
 
         assistantInput.value = "";
@@ -1124,11 +1193,22 @@
 
         const action = actionForText(text);
         if (!action) {
-          addMessage("assistant", "我还没把这句话识别成安全操作。可以换成：查状态、打开 AI、屏幕演示、今天笔记。");
+          addMessage("assistant", "我还没把这句话识别成安全操作。可以换成：查状态、GPIO、网络、记一下。");
           return;
         }
 
         runAction(action);
+      }
+
+      for (const button of document.querySelectorAll(".quick-action")) {
+        button.addEventListener("click", () => {
+          submitPrompt(button.dataset.prompt || "");
+        });
+      }
+
+      composer.addEventListener("submit", (event) => {
+        event.preventDefault();
+        submitPrompt(assistantInput.value);
       });
 
       new GLTFLoader().load(
