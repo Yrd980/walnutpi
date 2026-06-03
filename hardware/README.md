@@ -167,9 +167,10 @@ At the time of documentation, this prototype device runs:
 
 ```text
 docker.service: active
-frpc.service: active
+frpc.service: not configured
 bluetooth.service: active
-uptime-kuma container: healthy
+voice-keyboard-walnutpi.service: installed, disabled until USB microphone and STT are configured
+uptime-kuma container: not deployed
 ```
 
 ## Implications for Product Direction

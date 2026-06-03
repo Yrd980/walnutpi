@@ -26,11 +26,13 @@ def main() -> int:
 
     repo_root = Path(__file__).resolve().parent.parent
     py_ver = f"{sys.version_info.major}.{sys.version_info.minor}"
+    venv_site = Path(sys.prefix) / "lib" / f"python{py_ver}" / "site-packages"
 
-    # Prefer the repo copy plus distro packages, and avoid /usr/local NumPy
-    # that can be ABI-incompatible with Debian's python3-opencv package.
+    # Prefer the repo copy plus the active venv, and avoid /usr/local NumPy
+    # that can be ABI-incompatible with OpenCV builds.
     sanitized = [
         str(repo_root),
+        str(venv_site) if sys.prefix != sys.base_prefix and venv_site.exists() else "",
         f"/usr/lib/python{py_ver}/dist-packages",
         "/usr/lib/python3/dist-packages",
         *[path for path in sys.path if "/usr/local/lib/python" not in path],

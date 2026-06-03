@@ -30,18 +30,18 @@ python3 -m venv "$APP_DIR/.venv"
 "$APP_DIR/.venv/bin/python" -m pip install --upgrade pip
 "$APP_DIR/.venv/bin/python" -m pip install -r "$APP_DIR/requirements-walnutpi.txt"
 
-install -d "/home/$SERVICE_USER/.voice-keyboard"
+install -d -o "$SERVICE_USER" -g "$SERVICE_USER" "/home/$SERVICE_USER/.voice-keyboard"
 if [ ! -f "/home/$SERVICE_USER/.voice-keyboard/config.yaml" ]; then
   cp "$ROOT_DIR/voice-keyboard/config.walnutpi.yaml.example" "/home/$SERVICE_USER/.voice-keyboard/config.yaml"
-  chown "$SERVICE_USER:$SERVICE_USER" "/home/$SERVICE_USER/.voice-keyboard/config.yaml" || true
 fi
+chown "$SERVICE_USER:$SERVICE_USER" "/home/$SERVICE_USER/.voice-keyboard/config.yaml" || true
 
 sed "s/^User=.*/User=$SERVICE_USER/" \
   "$ROOT_DIR/voice-keyboard/packaging/linux/voice-keyboard-walnutpi.service" \
   > "/etc/systemd/system/$SERVICE_NAME"
 
 systemctl daemon-reload
-systemctl enable "$SERVICE_NAME"
+systemctl disable --now "$SERVICE_NAME" >/dev/null 2>&1 || true
 
 sed "s#/opt/walnut-voice-keyboard#$APP_DIR#g" \
   "$ROOT_DIR/scripts/walnut-voice-cli" > /usr/local/bin/walnut-voice-cli
@@ -50,5 +50,5 @@ chmod +x /usr/local/bin/walnut-voice-cli
 echo "Installed $SERVICE_NAME for user $SERVICE_USER"
 echo "Installed walnut-voice-cli -> /usr/local/bin/walnut-voice-cli"
 echo "Edit /home/$SERVICE_USER/.voice-keyboard/config.yaml or .env, then run:"
-echo "  sudo systemctl restart $SERVICE_NAME"
+echo "  sudo systemctl enable --now $SERVICE_NAME"
 echo "  journalctl -u $SERVICE_NAME -f"

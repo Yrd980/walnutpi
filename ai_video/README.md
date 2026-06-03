@@ -39,9 +39,10 @@ sudo /home/pi/projects/WalnutPi/scripts/install-walnut-ai.sh
 
 That installer now:
 
-- installs `python3-opencv` when needed
+- creates `/opt/walnut-ai-video/.venv`
+- installs `opencv-python-headless` into that venv
 - copies the demo assets into `/opt/walnut-ai-video`
-- uses `ai_video/run_module.py` to avoid `/usr/local` NumPy conflicts with Debian's `python3-opencv`
+- runs the demo players with the venv Python
 
 ## Regenerate demos
 

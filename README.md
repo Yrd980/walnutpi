@@ -20,8 +20,8 @@ WalnutPi 是一个把小型无桌面 Linux 板子做成便携式云端 AI 终端
 - 运行时：Python 3.11、Docker、systemd
 - AI 访问：通过兼容 OpenAI 的 API 调用云端 AI
 - 音频：通过 PulseAudio A2DP 播放蓝牙音频
-- 监控：Docker 中运行 Uptime Kuma
-- 远程访问：frpc 连接到已有 frps 服务
+- 监控：Docker 运行时已恢复，Uptime Kuma 待重新部署
+- 远程访问：局域网 SSH 可用，frpc 需要重新配置 frps 凭据
 
 这台设备被刻意当作轻量本地交互载体，而不是本地大模型推理机器。
 
@@ -60,18 +60,15 @@ WalnutPi 是一个把小型无桌面 Linux 板子做成便携式云端 AI 终端
 - 把笔记保存为 Markdown
 - 翻译和润色文本
 - 在终端里显示系统状态
-- 通过 frpc 暴露 SSH 远程访问
+- 通过局域网 SSH 远程访问
 - 通过 AirPods / A2DP 播放音频
-- 通过 `fbterm` 在本地 framebuffer 控制台显示中文
 - 保持正常 CLI 启动，不强制接管系统启动 shell
 
 ## 先试什么
 
 - `walnut` 作为主入口
 - `walnut ai` 直接进入云端 AI 终端
-- `walnut play` 体验音乐、数字雨、时钟和 ASCII 视频
-- `walnut console` 进入中文 framebuffer 控制台
-- `walnut maintenance` 进入浏览器、监控和修复菜单
+- `walnut play` 体验音乐、屏幕演示、ASCII 视频和一次性终端玩具
 
 ## 适合做什么
 
@@ -107,7 +104,7 @@ WalnutPi/
 ├── walnut-assistant/        # Walnut Home 命令中心
 ├── walnut-ai-terminal/      # WalnutAI Terminal V0
 ├── terminal-toys/           # Walnut Play 使用的纯终端工具
-├── console-chinese/         # 本地 framebuffer 中文显示说明
+├── hardware/system-config.md # 当前原型机系统配置记录
 ├── audio/
 │   └── airpods-linux/       # AirPods / Linux 播放与麦克风调查
 ├── scripts/                 # 安装和辅助脚本
@@ -130,22 +127,11 @@ WalnutPi/
 walnut
 ```
 
-### 中文本地控制台
-
-路径：`console-chinese/`
-
-这里记录本地屏幕上的中文显示方案：
-
-- Linux TTY 本身不适合稳定显示中文
-- 使用 `fbterm` 配合 WenQuanYi / Noto / Droid 回退字体
-- `walnut-cn` 会手动打开支持中文的 framebuffer 终端
-- 本地 `tty1` 登录会自动进入 `fbterm`，SSH 会话不受影响
-
 ### 终端玩具
 
 路径：`terminal-toys/`
 
-这里放的是 Walnut Play 使用的纯终端工具，例如音乐、数字雨、时钟和 ASCII 视频。
+这里放的是 Walnut Play 使用的纯终端工具，例如音乐、屏幕演示、ASCII 视频和一次性终端玩具。
 `walnut-fun` 现在只是兼容包装器，内部转发到 `walnut play`。
 
 ### 硬件说明
@@ -153,6 +139,8 @@ walnut
 路径：`hardware/`
 
 这里记录观察到的设备信息：系统、CPU、内存、存储、framebuffer 屏幕、触摸控制器、GPU / 显示说明、蓝牙 / 音频限制，以及有用的检查命令。
+
+当前原型机的系统级配置、镜像源、安装路径和服务状态记录在 `hardware/system-config.md`。
 
 ### WalnutAI 终端 V0
 
@@ -191,14 +179,14 @@ walnut-ai
 
 ## 原型机当前服务
 
-系统重置后，当前只恢复了基础 SSH 隧道：
+系统重置后，当前已恢复这些基础运行态：
 
-- `frpc.service`：已启用
-- FRP SSH 隧道：`walnutpi-ssh`，`150.158.146.192:6230 -> 127.0.0.1:22`
+- `docker.service`：已启用并运行
+- `frpc.service`：未恢复；需要重新提供 frps 地址、端口和凭据
+- `voice-keyboard-walnutpi.service`：已安装但默认不启用；接入麦克风并配置 STT 凭据后再手动启用
 - Walnut Home 启动器：`/usr/local/bin/walnut`
 - WalnutAI 启动器：`/usr/local/bin/walnut-ai`
 - WalnutAI 代码：`/opt/walnut-ai/walnut_ai.py`
-- 中文控制台助手：`/usr/local/bin/walnut-cn`
 
 ## 开发规则
 
