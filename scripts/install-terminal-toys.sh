@@ -19,7 +19,6 @@ apt-get install -y \
   pipes-sh \
   libaa-bin \
   caca-utils \
-  nyancat \
   sl \
   toilet \
   fortune-mod \

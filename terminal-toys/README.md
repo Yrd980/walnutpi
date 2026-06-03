@@ -15,7 +15,7 @@ walnut
 `walnut play` 按用途分成三类：
 
 - `Music`：音乐播放器和音乐可视化
-- `Screen`：数字雨、管道、火焰、Nyancat、ASCII demo、ASCII 视频和时钟，适合本地小屏展示
+- `Screen`：数字雨、管道、火焰、ASCII demo、ASCII 视频和时钟，适合本地小屏展示
 - `One-shot Toys`：蒸汽小火车、大字横幅、fortune/cowsay 和 quote box
 
 Walnut 菜单会使用 ANSI 颜色区分分类和入口。SSH / kitty 这类现代终端使用 256 色；本地 `fbterm` / Linux console 会自动降级到基础 16 色，避免小屏颜色被错误映射成一层灰雾。如果当前终端不适合显示颜色，可以用 `NO_COLOR=1 walnut play` 关闭菜单颜色。支持彩色输出的玩具会优先使用彩色模式，例如彩虹数字雨、彩色时钟、彩色管道和 `lolcat` 输出。
@@ -60,7 +60,6 @@ terminal-toys/walnut-fun
 | Screen | pipes-sh | 彩色管道屏保 | `pipes -p 4 -R -K -f 60` |
 | Screen | libaa-bin | ASCII 火焰 | `aafire` |
 | Screen | caca-utils | 彩色火焰和 libcaca demo | `cacafire`, `cacademo` |
-| Screen | nyancat | 终端 Nyancat 动画 | `nyancat` |
 | Screen | tty-clock | 彩色终端时钟 | `tty-clock -c -s -C 6 -b` |
 | One-shot Toys | sl | 一次性蒸汽小火车 | `sl -e` |
 | One-shot Toys | toilet | 彩虹终端大字横幅 | `toilet -t --gay TEXT` |

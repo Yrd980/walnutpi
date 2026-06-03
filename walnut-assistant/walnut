@@ -338,10 +338,6 @@ def launch_cacafire() -> int:
     return launch_effect("cacafire", "cacafire")
 
 
-def launch_nyancat() -> int:
-    return launch_effect("nyancat", "nyancat")
-
-
 def launch_cacademo() -> int:
     return launch_effect("cacademo", "cacademo", quit_hint="q or Ctrl+C")
 
@@ -535,10 +531,9 @@ def play_screen_menu(_: argparse.Namespace | None = None) -> int:
         choice_line("2", "Pipes", PALETTE["pipes"])
         choice_line("3", "ASCII Fire", PALETTE["fire"])
         choice_line("4", "Color Fire", PALETTE["hot"])
-        choice_line("5", "Nyancat", PALETTE["nyan"])
-        choice_line("6", "Caca Demo", PALETTE["caca"])
-        choice_line("7", "ASCII Video", PALETTE["video"])
-        choice_line("8", "Clock", PALETTE["status"])
+        choice_line("5", "Caca Demo", PALETTE["caca"])
+        choice_line("6", "ASCII Video", PALETTE["video"])
+        choice_line("7", "Clock", PALETTE["status"])
         print()
         back_line()
         choice = input("\nSelect> ").strip().lower()
@@ -551,12 +546,10 @@ def play_screen_menu(_: argparse.Namespace | None = None) -> int:
         elif choice == "4":
             launch_cacafire()
         elif choice == "5":
-            launch_nyancat()
-        elif choice == "6":
             launch_cacademo()
-        elif choice == "7":
+        elif choice == "6":
             play_video_menu(None)
-        elif choice == "8":
+        elif choice == "7":
             launch_clock()
         elif choice in {"b", "back", "q", "quit", "exit"}:
             return 0

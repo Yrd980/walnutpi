@@ -1,0 +1,525 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>3D SSH Terminal</title>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/@xterm/xterm/css/xterm.css"
+    />
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+          sans-serif;
+        background: #0c0d0e;
+        color: #f0efe7;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        overflow: hidden;
+        background:
+          radial-gradient(circle at 20% 18%, rgba(255, 255, 255, 0.08), transparent 30%),
+          linear-gradient(145deg, #101214 0%, #181b1a 52%, #0c0d0e 100%);
+      }
+
+      #stage {
+        position: fixed;
+        inset: 0;
+      }
+
+      #stage > canvas,
+      #stage > div {
+        position: absolute;
+        inset: 0;
+      }
+
+      #stage > canvas {
+        pointer-events: none;
+      }
+
+      .screen {
+        width: 640px;
+        height: 400px;
+        overflow: hidden;
+        border: 8px solid #111413;
+        border-radius: 8px;
+        background: #0c0d0e;
+        box-shadow:
+          0 0 0 1px rgba(224, 182, 90, 0.34),
+          0 22px 60px rgba(0, 0, 0, 0.42),
+          inset 0 1px 0 rgba(255, 255, 255, 0.08);
+        backface-visibility: hidden;
+        visibility: hidden;
+      }
+
+      .screen-bar {
+        display: flex;
+        height: 28px;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        border-bottom: 1px solid #26302a;
+        padding: 0 9px;
+        background: #171b19;
+        color: #cbd3c8;
+        font-size: 12px;
+        letter-spacing: 0;
+      }
+
+      .screen-title {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .screen-status {
+        display: flex;
+        flex: 0 0 auto;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: #d0a044;
+      }
+
+      .dot.is-open {
+        background: #75c486;
+      }
+
+      .dot.is-closed {
+        background: #d66b65;
+      }
+
+      #terminal {
+        width: 100%;
+        height: calc(100% - 28px);
+        padding: 5px;
+      }
+
+      .xterm {
+        height: 100%;
+      }
+
+      .hud {
+        position: fixed;
+        top: 14px;
+        left: 14px;
+        z-index: 5;
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+        pointer-events: none;
+      }
+
+      .panel,
+      .buttons {
+        border: 1px solid rgba(240, 239, 231, 0.16);
+        border-radius: 8px;
+        background: rgba(13, 15, 14, 0.76);
+        box-shadow: 0 18px 50px rgba(0, 0, 0, 0.24);
+        backdrop-filter: blur(14px);
+        pointer-events: auto;
+      }
+
+      .panel {
+        display: none;
+        width: min(300px, calc(100vw - 96px));
+        padding: 10px;
+      }
+
+      .panel.is-open {
+        display: grid;
+        gap: 9px;
+      }
+
+      .control {
+        display: grid;
+        grid-template-columns: 42px minmax(0, 1fr) 54px;
+        align-items: center;
+        gap: 8px;
+        color: #cbd3c8;
+        font-size: 12px;
+      }
+
+      .control output {
+        color: #f0efe7;
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+      }
+
+      input[type="range"] {
+        width: 100%;
+        accent-color: #d0a044;
+      }
+
+      .buttons {
+        display: flex;
+        gap: 6px;
+        padding: 6px;
+      }
+
+      button {
+        display: grid;
+        width: 36px;
+        height: 36px;
+        place-items: center;
+        border: 0;
+        border-radius: 6px;
+        background: transparent;
+        color: #f0efe7;
+        cursor: pointer;
+      }
+
+      button:hover,
+      button:focus-visible,
+      button.is-active {
+        background: rgba(240, 239, 231, 0.12);
+        outline: none;
+      }
+
+      button svg {
+        width: 19px;
+        height: 19px;
+        fill: none;
+        stroke: currentColor;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        stroke-width: 2;
+      }
+
+      @media (max-width: 620px) {
+        .hud {
+          top: 9px;
+          left: 9px;
+        }
+
+        .screen {
+          width: 520px;
+          height: 325px;
+        }
+      }
+    </style>
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://cdn.jsdelivr.net/npm/three@0.179.1/build/three.module.js",
+          "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.179.1/examples/jsm/"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <div id="stage"></div>
+
+    <div class="screen" id="screen">
+      <div class="screen-bar">
+        <span class="screen-title">root@192.168.1.30</span>
+        <span class="screen-status">
+          <span class="dot" id="dot"></span>
+          <span id="statusText">Connecting</span>
+        </span>
+      </div>
+      <div id="terminal"></div>
+    </div>
+
+    <div class="hud">
+      <div class="buttons">
+        <button id="resetView" type="button" aria-label="Reset view" title="Reset view">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M3 12a9 9 0 1 0 3-6.7" />
+            <path d="M3 3v6h6" />
+          </svg>
+        </button>
+        <button id="reconnect" type="button" aria-label="Reconnect SSH" title="Reconnect SSH">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M21 12a9 9 0 0 1-15.7 6" />
+            <path d="M3 12a9 9 0 0 1 15.7-6" />
+            <path d="M21 4v6h-6" />
+            <path d="M3 20v-6h6" />
+          </svg>
+        </button>
+        <button id="togglePanel" type="button" aria-label="Adjust screen" title="Adjust screen">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 21v-7" />
+            <path d="M4 10V3" />
+            <path d="M12 21v-9" />
+            <path d="M12 8V3" />
+            <path d="M20 21v-5" />
+            <path d="M20 12V3" />
+            <path d="M2 14h4" />
+            <path d="M10 8h4" />
+            <path d="M18 16h4" />
+          </svg>
+        </button>
+      </div>
+      <div class="panel" id="panel">
+        <label class="control">
+          <span>X</span>
+          <input id="screenX" type="range" min="-0.4" max="0.4" step="0.005" value="0" />
+          <output for="screenX">0.000</output>
+        </label>
+        <label class="control">
+          <span>Y</span>
+          <input id="screenY" type="range" min="-0.35" max="0.45" step="0.005" value="0.1" />
+          <output for="screenY">0.100</output>
+        </label>
+        <label class="control">
+          <span>Z</span>
+          <input id="screenZ" type="range" min="-0.2" max="0.2" step="0.005" value="0.085" />
+          <output for="screenZ">0.085</output>
+        </label>
+        <label class="control">
+          <span>Size</span>
+          <input id="screenScale" type="range" min="0.00035" max="0.0012" step="0.00001" value="0.00074" />
+          <output for="screenScale">0.00074</output>
+        </label>
+        <label class="control">
+          <span>Tilt</span>
+          <input id="screenTilt" type="range" min="-45" max="45" step="1" value="0" />
+          <output for="screenTilt">0</output>
+        </label>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@xterm/xterm/lib/xterm.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@xterm/addon-fit/lib/addon-fit.js"></script>
+    <script type="module">
+      import * as THREE from "three";
+      import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+      import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+      import { CSS3DObject, CSS3DRenderer } from "three/addons/renderers/CSS3DRenderer.js";
+
+      const MODEL_URL = "./0c6390ea8b1ccf186ec099456954fd42.glb";
+      const stage = document.querySelector("#stage");
+      const screen = document.querySelector("#screen");
+      const terminalElement = document.querySelector("#terminal");
+      const statusText = document.querySelector("#statusText");
+      const dot = document.querySelector("#dot");
+      const panel = document.querySelector("#panel");
+      const previewOnly = new URLSearchParams(window.location.search).has("nossh");
+
+      const controlsById = {
+        x: document.querySelector("#screenX"),
+        y: document.querySelector("#screenY"),
+        z: document.querySelector("#screenZ"),
+        scale: document.querySelector("#screenScale"),
+        tilt: document.querySelector("#screenTilt"),
+      };
+
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(42, 1, 0.01, 100);
+      camera.position.set(0.9, 0.42, 1.28);
+
+      const webglRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+      webglRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      webglRenderer.outputColorSpace = THREE.SRGBColorSpace;
+      webglRenderer.toneMapping = THREE.ACESFilmicToneMapping;
+      webglRenderer.toneMappingExposure = 1.08;
+      stage.appendChild(webglRenderer.domElement);
+
+      const cssRenderer = new CSS3DRenderer();
+      stage.appendChild(cssRenderer.domElement);
+
+      const orbit = new OrbitControls(camera, cssRenderer.domElement);
+      orbit.enableDamping = true;
+      orbit.target.set(0, 0.03, 0);
+      orbit.minDistance = 0.42;
+      orbit.maxDistance = 3.4;
+
+      scene.add(new THREE.HemisphereLight(0xf6f1df, 0x425156, 2.35));
+
+      const keyLight = new THREE.DirectionalLight(0xffffff, 2.8);
+      keyLight.position.set(1.4, 2.1, 1.7);
+      scene.add(keyLight);
+
+      const fillLight = new THREE.DirectionalLight(0xaecfff, 1.25);
+      fillLight.position.set(-1.5, 0.7, -0.8);
+      scene.add(fillLight);
+
+      const floor = new THREE.Mesh(
+        new THREE.CircleGeometry(0.72, 96),
+        new THREE.MeshStandardMaterial({
+          color: 0x202522,
+          roughness: 0.9,
+          metalness: 0.04,
+        }),
+      );
+      floor.position.y = -0.5;
+      floor.rotation.x = -Math.PI / 2;
+      scene.add(floor);
+
+      const grid = new THREE.GridHelper(1.44, 18, 0x66706a, 0x313833);
+      grid.position.y = -0.497;
+      grid.material.opacity = 0.34;
+      grid.material.transparent = true;
+      scene.add(grid);
+
+      const screenObject = new CSS3DObject(screen);
+      scene.add(screenObject);
+      screen.style.visibility = "visible";
+
+      const term = new Terminal({
+        cursorBlink: true,
+        fontFamily: 'Menlo, Monaco, Consolas, "Liberation Mono", monospace',
+        fontSize: 12,
+        lineHeight: 1.1,
+        scrollback: 5000,
+        theme: {
+          background: "#0c0d0e",
+          foreground: "#f0efe7",
+          cursor: "#d0a044",
+          selectionBackground: "#4b5b51",
+        },
+      });
+
+      const fitAddon = new FitAddon.FitAddon();
+      let socket;
+
+      term.loadAddon(fitAddon);
+      term.open(terminalElement);
+      fitAddon.fit();
+
+      function setStatus(text, state) {
+        statusText.textContent = text;
+        dot.classList.toggle("is-open", state === "open");
+        dot.classList.toggle("is-closed", state === "closed");
+      }
+
+      function connectTerminal() {
+        if (socket) socket.close();
+
+        setStatus("Connecting", "pending");
+        term.reset();
+
+        const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+        socket = new WebSocket(`${protocol}://${window.location.host}/terminal`);
+        socket.binaryType = "arraybuffer";
+
+        socket.addEventListener("open", () => {
+          setStatus("Connected", "open");
+          term.focus();
+        });
+
+        socket.addEventListener("message", (event) => {
+          if (event.data instanceof ArrayBuffer) {
+            term.write(new Uint8Array(event.data));
+            return;
+          }
+          term.write(event.data);
+        });
+
+        socket.addEventListener("close", () => setStatus("Closed", "closed"));
+        socket.addEventListener("error", () => setStatus("Error", "closed"));
+      }
+
+      term.onData((data) => {
+        if (socket && socket.readyState === WebSocket.OPEN) {
+          socket.send(data);
+        }
+      });
+
+      function updateScreenTransform() {
+        const x = Number(controlsById.x.value);
+        const y = Number(controlsById.y.value);
+        const z = Number(controlsById.z.value);
+        const scale = Number(controlsById.scale.value);
+        const tilt = THREE.MathUtils.degToRad(Number(controlsById.tilt.value));
+
+        screenObject.position.set(x, y, z);
+        screenObject.rotation.set(tilt, 0, 0);
+        screenObject.scale.setScalar(scale);
+
+        for (const input of Object.values(controlsById)) {
+          const output = input.parentElement.querySelector("output");
+          const value = Number(input.value);
+          output.value = input.id === "screenScale" ? value.toFixed(5) : value.toFixed(3);
+        }
+      }
+
+      for (const input of Object.values(controlsById)) {
+        input.addEventListener("input", updateScreenTransform);
+      }
+
+      screen.addEventListener("pointerdown", (event) => {
+        event.stopPropagation();
+        orbit.enabled = false;
+      });
+      document.addEventListener("pointerup", () => {
+        orbit.enabled = true;
+      });
+
+      document.querySelector("#resetView").addEventListener("click", () => {
+        camera.position.set(0.9, 0.42, 1.28);
+        orbit.target.set(0, 0.03, 0);
+        orbit.update();
+      });
+
+      document.querySelector("#reconnect").addEventListener("click", connectTerminal);
+      document.querySelector("#togglePanel").addEventListener("click", () => {
+        panel.classList.toggle("is-open");
+      });
+
+      new GLTFLoader().load(
+        MODEL_URL,
+        (gltf) => {
+          const root = gltf.scene;
+          const box = new THREE.Box3().setFromObject(root);
+          const center = box.getCenter(new THREE.Vector3());
+
+          root.position.sub(center);
+          scene.add(root);
+        },
+        undefined,
+        (error) => {
+          console.error(error);
+          term.writeln("\\r\\n[local] model load failed");
+        },
+      );
+
+      function resize() {
+        const width = stage.clientWidth;
+        const height = stage.clientHeight;
+
+        webglRenderer.setSize(width, height, false);
+        cssRenderer.setSize(width, height);
+        camera.aspect = width / height;
+        camera.updateProjectionMatrix();
+        fitAddon.fit();
+      }
+
+      function animate() {
+        orbit.update();
+        webglRenderer.render(scene, camera);
+        cssRenderer.render(scene, camera);
+        requestAnimationFrame(animate);
+      }
+
+      updateScreenTransform();
+      if (previewOnly) {
+        setStatus("Preview", "pending");
+        term.writeln("[local] SSH disabled for preview");
+      } else {
+        connectTerminal();
+      }
+      resize();
+      animate();
+
+      window.addEventListener("resize", resize);
+    </script>
+  </body>
+</html>
