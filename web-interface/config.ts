@@ -11,7 +11,7 @@ export const PROJECT_ROOT = path.resolve(BASE_DIR, "..");
 
 export const HOST = "127.0.0.1";
 export const PORT = Number(process.env.PORT || 4173);
-export const MODEL_FILE = "0c6390ea8b1ccf186ec099456954fd42.glb";
+export const MODEL_FILE = "walnut.glb";
 
 // ── SSH ──────────────────────────────────────────────────────────────
 export const SSH_HOST = process.env.SSH_HOST || "192.168.44.126";
